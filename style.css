@@ -24,13 +24,27 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.game-shell {
+/* .game-shell {
     display: grid;
     grid-template-columns: 176px minmax(0, 540px);
     gap: 32px;
     align-items: center;
     width: min(100% - 40px, 780px);
     padding: 32px 0;
+} */
+
+.game-shell {
+    display: grid;
+    grid-template-columns: 176px 1fr 176px;
+    /* Left: controls | Center: game | Right: empty spacer */
+    gap: 32px;
+    align-items: start;
+    width: 100%;
+    /* Full width, no max cap */
+    max-width: none;
+    padding: 32px 40px;
+    justify-items: center;
+    /* Center the game panel in its column */
 }
 
 .controls-info {

@@ -249,6 +249,30 @@ class PipePuzzleGame {
         this.lastMoveTime = 0;
         this.moveDelay = 150;
 
+        // Pipe rotation animation state
+        this.pipeRotationAnim = {
+            active: false,
+            progress: 0,
+            duration: 220,
+            startTime: 0,
+            direction: 1,
+            onComplete: null
+        };
+
+        // Player movement animation state
+        this.playerMoveAnim = {
+            active: false,
+            progress: 0,
+            duration: 180,
+            startTime: 0,
+            fromX: 0,
+            fromY: 0,
+            toX: 0,
+            toY: 0,
+            dirX: 0,
+            dirY: 0
+        };
+
         this.setupInput();
         this.gameLoop();
     }
@@ -375,7 +399,7 @@ class PipePuzzleGame {
             // Effects are reversed when the candy is removed from the tile
             // the player is stepping off, not when stepping onto it.
             if (currentTile === 'R' && this.activeRotators.has(currentKey)) {
-                this.rotateAllPipes(-1);
+                this.triggerRotation(-1);
                 this.activeRotators.delete(currentKey);
             }
             if (currentTile === 'B' && this.boxesCollected.delete(currentKey)) {
@@ -392,13 +416,13 @@ class PipePuzzleGame {
                 this.collectedBoxes++;
             }
             if (targetTile === 'R') {
-                this.rotateAllPipes(1);
+                this.triggerRotation(1);
                 this.activeRotators.add(targetKey);
             }
         }
 
-        this.player.x = newX;
-        this.player.y = newY;
+        // Trigger smooth player movement animation
+        this.triggerPlayerMove(this.player.x, this.player.y, newX, newY);
 
         // Check for finish
         if (targetTile === 'F') {
@@ -410,14 +434,106 @@ class PipePuzzleGame {
         }
     }
 
-    // Rotate pipes once in the direction caused by the rotator crossing.
-    rotateAllPipes(direction) {
+    // Trigger a smooth, mechanical pipe rotation animation.
+    triggerRotation(direction) {
+        if (this.pipeRotationAnim.active) return;
+
         const rotationMap = direction === -1
             ? COUNTER_CLOCKWISE
             : { up: 'right', right: 'down', down: 'left', left: 'up' };
 
-        for (const [key, pipe] of this.pipeStates) {
-            pipe.dirs = pipe.dirs.map(d => rotationMap[d]);
+        this.pipeRotationAnim = {
+            active: true,
+            progress: 0,
+            duration: 220,
+            startTime: performance.now(),
+            direction: direction,
+            onComplete: () => {
+                // Apply the actual logical rotation only when animation finishes
+                for (const [, pipe] of this.pipeStates) {
+                    pipe.dirs = pipe.dirs.map(d => rotationMap[d]);
+                }
+                this.pipeRotationAnim.active = false;
+            }
+        };
+    }
+
+    // Update the rotation animation each frame.
+    updateRotationAnim() {
+        if (!this.pipeRotationAnim.active) return;
+
+        const elapsed = performance.now() - this.pipeRotationAnim.startTime;
+        const t = Math.min(elapsed / this.pipeRotationAnim.duration, 1);
+
+        // Rigid mechanical bounce: slight overshoot then snap back
+        const overshoot = 1.08;
+        let eased;
+        if (t === 1) {
+            eased = 1;
+        } else {
+            const c1 = overshoot;
+            const c3 = c1 + 1;
+            eased = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        }
+
+        this.pipeRotationAnim.progress = eased;
+
+        if (t >= 1) {
+            this.pipeRotationAnim.onComplete();
+        }
+    }
+
+    // Trigger a smooth, bouncy player movement animation.
+    triggerPlayerMove(fromX, fromY, toX, toY) {
+        if (this.playerMoveAnim.active) {
+            // Snap previous animation to finish
+            this.player.x = this.playerMoveAnim.toX;
+            this.player.y = this.playerMoveAnim.toY;
+        }
+
+        this.playerMoveAnim = {
+            active: true,
+            progress: 0,
+            duration: 180,
+            startTime: performance.now(),
+            fromX: fromX,
+            fromY: fromY,
+            toX: toX,
+            toY: toY,
+            dirX: toX - fromX,
+            dirY: toY - fromY
+        };
+    }
+
+    // Update the player movement animation each frame.
+    updatePlayerMoveAnim() {
+        if (!this.playerMoveAnim.active) return;
+
+        const elapsed = performance.now() - this.playerMoveAnim.startTime;
+        const t = Math.min(elapsed / this.playerMoveAnim.duration, 1);
+
+        // Bouncy overshoot easing — same feel as pipe rotation
+        const overshoot = 1.12;
+        let eased;
+        if (t === 1) {
+            eased = 1;
+        } else {
+            const c1 = overshoot;
+            const c3 = c1 + 1;
+            eased = 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+        }
+
+        this.playerMoveAnim.progress = eased;
+
+        // Update logical position immediately so game logic works,
+        // but visual position is interpolated
+        this.player.x = this.playerMoveAnim.fromX + this.playerMoveAnim.dirX * eased;
+        this.player.y = this.playerMoveAnim.fromY + this.playerMoveAnim.dirY * eased;
+
+        if (t >= 1) {
+            this.player.x = this.playerMoveAnim.toX;
+            this.player.y = this.playerMoveAnim.toY;
+            this.playerMoveAnim.active = false;
         }
     }
 
@@ -776,8 +892,15 @@ class PipePuzzleGame {
         // Check if this pipe is connected to player's current position
         const isConnected = this.isPipeConnected(x, y);
 
+        // Calculate visual rotation angle during animation
+        let visualAngle = 0;
+        if (this.pipeRotationAnim.active) {
+            visualAngle = (Math.PI / 2) * this.pipeRotationAnim.progress * this.pipeRotationAnim.direction;
+        }
+
         ctx.save();
         ctx.translate(cx, cy);
+        ctx.rotate(visualAngle);
 
         // Base
         ctx.fillStyle = isConnected ? COLORS.pipeHighlight : COLORS.pipe;
@@ -959,6 +1082,8 @@ class PipePuzzleGame {
 
     // Main game loop
     gameLoop() {
+        this.updateRotationAnim();
+        this.updatePlayerMoveAnim();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
     }
