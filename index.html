@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipe Puzzle Adventure</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="game-shell">
+        <aside class="controls-info" aria-label="Keyboard controls">
+            <p class="controls-title">Controls</p>
+            <div class="control-key"><kbd>W</kbd><span>Move up</span></div>
+            <div class="control-key"><kbd>A</kbd><span>Move left</span></div>
+            <div class="control-key"><kbd>S</kbd><span>Move down</span></div>
+            <div class="control-key"><kbd>D</kbd><span>Move right</span></div>
+            <div class="control-key"><kbd>R</kbd><span>Restart level</span></div>
+            <div class="control-key"><kbd>N</kbd><span>New level</span></div>
+        </aside>
+        <section class="game-panel" aria-label="Pipe puzzle game">
+            <div class="game-heading" style="display: none;">
+                <p>Pipe Puzzle Adventure</p>
+                <span id="levelIndicator">Level 1</span>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="gameCanvas" width="540" height="540" aria-label="Puzzle board"></canvas>
+            </div>
+        </section>
+    </main>
+    <div class="modal active" id="startModal" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+        <div class="modal-content">
+            <h1 id="startTitle">Pipe Puzzle</h1>
+            <p>Find your way through the pipes and reach the finish.</p>
+            <button class="btn" id="startBtn" type="button">Start game</button>
+            <script>
+                document.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        document.getElementById("nextLevelBtn").click();
+                    }
+                });
+            </script>
+        </div>
+    </div>
+    <div class="modal" id="levelCompleteModal" role="dialog" aria-modal="true" aria-labelledby="completeTitle">
+        <div class="modal-content">
+            <h1 id="completeTitle">Level complete</h1>
+            <p>You reached the finish.</p>
+            <button class="btn" id="nextLevelBtn" type="button">Next level</button>
+            <script>
+                document.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        document.getElementById("nextLevelBtn").click();
+                    }
+                });
+            </script>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+
+</html>
