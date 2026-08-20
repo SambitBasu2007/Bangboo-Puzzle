@@ -309,8 +309,12 @@ class PipePuzzleGame {
 
     // Get tile at position
     getTile(x, y) {
-        if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return 'X';
-        return this.currentLevel.grid[y][x];
+        const ix = Math.round(x);
+        const iy = Math.round(y);
+        if (ix < 0 || ix >= GRID_SIZE || iy < 0 || iy >= GRID_SIZE) return 'X';
+        const row = this.currentLevel.grid[iy];
+        if (!row || ix >= row.length) return 'X';
+        return row[ix];
     }
 
     // Get pipe state at position
@@ -376,6 +380,9 @@ class PipePuzzleGame {
     // Move player
     move(dir) {
         if (this.state !== STATE.PLAYING) return;
+
+        // Block if player movement animation is still running
+        if (this.playerMoveAnim.active) return;
 
         const now = Date.now();
         if (now - this.lastMoveTime < this.moveDelay) return;
@@ -679,7 +686,9 @@ class PipePuzzleGame {
                 break;
         }
 
-        if (this.visitedTiles.has(`${y},${x}`) && (this.player.x !== x || this.player.y !== y)) {
+        const pxRounded = Math.round(this.player.x);
+        const pyRounded = Math.round(this.player.y);
+        if (this.visitedTiles.has(`${y},${x}`) && (pxRounded !== x || pyRounded !== y)) {
             this.drawTrail(px, py);
         }
     }
@@ -953,8 +962,10 @@ class PipePuzzleGame {
 
     isPipeConnected(x, y) {
         // Check if player is adjacent and can move through this pipe
-        const dx = Math.abs(this.player.x - x);
-        const dy = Math.abs(this.player.y - y);
+        const px = Math.round(this.player.x);
+        const py = Math.round(this.player.y);
+        const dx = Math.abs(px - x);
+        const dy = Math.abs(py - y);
         if (dx + dy !== 1) return false;
 
         // Check if player can move to this pipe
